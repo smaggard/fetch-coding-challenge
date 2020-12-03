@@ -1,16 +1,17 @@
 #!/bin/env python3
 
-import yaml
+import argparse
 import boto3
 import re
-
-YAML_FILE = 'ec2-instance.yaml'
+import yaml
 
 ec2 = boto3.resource('ec2')
 
-
 class CreateEC2Instance(object):
     def __init__(self, YAML_FILE):
+        """ Init for the CreateEC2Instance object.  It takes a path to a YAML file as input
+            and verifies it can be loaded, then creates all the instance level variables
+        """
         try:
             with open(YAML_FILE) as f:
                 yaml_parsed = yaml.load(f, Loader=yaml.FullLoader)
@@ -27,6 +28,9 @@ class CreateEC2Instance(object):
         self.cloud_init += self.__create_cloud_init_mounts(yaml_parsed['server']['volumes'])
 
     def __create_block_device_list(self, devices):
+        """ Function to create the list of blockdevices for create instance method 
+            Takes a list of devices from the yaml parsing as input
+        """
         result = []
         for device in devices:
             device_dict = {
@@ -43,6 +47,7 @@ class CreateEC2Instance(object):
         return result
 
     def __create_cloud_init_users(self, users):
+        """ Create the cloud-config text for the users required """
         result = "#cloud-config\n"
         result += "users:\n"
         for user in users:
@@ -56,6 +61,7 @@ class CreateEC2Instance(object):
         return result
 
     def __create_cloud_init_fs(self, mounts):
+        """ Create the cloud-config text for the filesystems required """
         result = "fs_setup:\n"
         for mount in mounts:
             result += f"  - label: {mount['mount']}\n"
@@ -66,6 +72,7 @@ class CreateEC2Instance(object):
         return result
 
     def __create_cloud_init_mounts(self, mounts):
+        """ Create the cloud-config text for the mountpoints """
         result = "mounts:\n"
         for mount in mounts:
             if mount['mount'] == '/':
@@ -78,11 +85,7 @@ class CreateEC2Instance(object):
         
 
     def create_instance(self):
-        print(self.instance_type)
-        print(self.ami_type)
-        print(self.min_count)
-        print(self.max_count)
-        print(self.block_devices)
+        """ Function that creates the EC2 Instance as required """
         instance = ec2.create_instances(
             InstanceType=self.instance_type,
             ImageId=self.ami_type,
@@ -93,7 +96,8 @@ class CreateEC2Instance(object):
             UserData=self.cloud_init
         )
 
-    def test_parameters(self):
+    def print_parameters(self):
+        """ Function that will print all the parameters that are used in the creation """
         print(self.instance_type)
         print(self.ami_type)
         print(self.min_count)
@@ -103,6 +107,11 @@ class CreateEC2Instance(object):
 
 
 if __name__ == "__main__":
-    ec2_instance = CreateEC2Instance(YAML_FILE)
-    ec2_instance.test_parameters()
+    parser = argparse.ArgumentParser(description="Create EC2 instance from YAML")
+    parser.add_argument('--yaml', dest='YAML_FILE', required=True)
+    parser.add_argument('--parse')
+    args = parser.parse_args()
+    if args.parse:
+        ec2_instance.print_parameters()
+    ec2_instance = CreateEC2Instance(args.YAML_FILE)
     instance_id = ec2_instance.create_instance()
