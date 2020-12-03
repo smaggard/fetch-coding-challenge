@@ -111,7 +111,7 @@ if __name__ == "__main__":
     parser.add_argument('--yaml', dest='YAML_FILE', required=True)
     parser.add_argument('--parse')
     args = parser.parse_args()
-    if args.parse:
-        ec2_instance.print_parameters()
     ec2_instance = CreateEC2Instance(args.YAML_FILE)
     instance_id = ec2_instance.create_instance()
+    if args.parse:
+        ec2_instance.print_parameters()
