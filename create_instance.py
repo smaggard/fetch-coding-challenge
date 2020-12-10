@@ -8,7 +8,7 @@ import yaml
 ec2 = boto3.resource('ec2')
 
 class CreateEC2Instance(object):
-    def __init__(self, YAML_FILE):
+    def __init__(self, YAML_FILE, key_file):
         """ Init for the CreateEC2Instance object.  It takes a path to a YAML file as input
             and verifies it can be loaded, then creates all the instance level variables
         """
@@ -19,13 +19,22 @@ class CreateEC2Instance(object):
             print("Invalid YAML file provided")
             exit()
 
+        __validate_yaml(yaml_parsed)
+        self.key_file = key_file
         self.instance_type = yaml_parsed['server']['instance_type']
         self.ami_type = yaml_parsed['server']['ami_type']
         self.min_count = yaml_parsed['server']['min_count']
         self.max_count = MaxCount=yaml_parsed['server']['max_count']
         self.block_devices = self.__create_block_device_list(yaml_parsed['server']['volumes'])
-        self.cloud_init = self.__create_cloud_init_fs(yaml_parsed['server']['volumes'])
+        self.cloud_init = self.__create_cloud_init_users(yaml_parsed['server']['users'])
+        self.cloud_init += self.__create_cloud_init_fs(yaml_parsed['server']['volumes'])
         self.cloud_init += self.__create_cloud_init_mounts(yaml_parsed['server']['volumes'])
+
+    def __validate_yaml(self, yaml):
+        if ['instance_type', 'ami_type', 'min_count', 'max_count', 'volumes', 'users'] not in yaml['server'].keys():
+            raise Exception("YAML file is missing a required parameter, required parameters are 'instance_type', 'ami_type', 'min_count', 'max_count', 'volumes', 'users'")
+        else:
+            return True
 
     def __create_block_device_list(self, devices):
         """ Function to create the list of blockdevices for create instance method 
@@ -92,7 +101,7 @@ class CreateEC2Instance(object):
             MinCount=self.min_count,
             MaxCount=self.max_count,
             BlockDeviceMappings=self.block_devices,
-            KeyName='smaggard',
+            KeyName=self.key_file,
             UserData=self.cloud_init
         )
 
@@ -109,9 +118,10 @@ class CreateEC2Instance(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create EC2 instance from YAML")
     parser.add_argument('--yaml', dest='YAML_FILE', required=True)
+    parser.add_argument('--keyfile' dest='key_file', required=True)
     parser.add_argument('--parse')
     args = parser.parse_args()
-    ec2_instance = CreateEC2Instance(args.YAML_FILE)
+    ec2_instance = CreateEC2Instance(args.YAML_FILE, args.key_file)
     instance_id = ec2_instance.create_instance()
     if args.parse:
         ec2_instance.print_parameters()
