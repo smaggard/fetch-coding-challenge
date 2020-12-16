@@ -31,8 +31,18 @@ class CreateEC2Instance(object):
         self.cloud_init += self.__create_cloud_init_mounts(yaml_parsed['server']['volumes'])
 
     def __validate_yaml(self, yaml):
-        if ['instance_type', 'ami_type', 'min_count', 'max_count', 'volumes', 'users'] not in yaml['server'].keys():
-            raise Exception("YAML file is missing a required parameter, required parameters are 'instance_type', 'ami_type', 'min_count', 'max_count', 'volumes', 'users'")
+        if 'instance_type'  not in yaml['server'].keys():
+            raise Exception("YAML file is missing a instance type parameter")
+        elif 'ami_type'  not in yaml['server'].keys():
+            raise Exception("YAML file is missing ami_type parameter")
+        elif 'min_count' not in yaml['server'].keys():
+            raise Exception("YAML file is missing min_count parameter")
+        elif 'max_count' not in yaml['server'].keys():
+            raise Exception("YAML file is missing max_count parameter")
+        elif 'volumes' not in yaml['server'].keys():
+            raise Exception("YAML file is missing volumes parameter")
+        elif 'users' not in yaml['server'].keys():
+            raise Exception("YAML file is missing users parameter")
         else:
             return True
 
